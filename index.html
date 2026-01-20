@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UAE Leak Radar</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script type="module">
+    import * as lucide from 'https://cdn.skypack.dev/lucide-react';
+    window.lucide = lucide;
+  </script>
+</head>
+<body class="bg-[#0F0F0F] text-white font-sans">
+  <div id="root" class="min-h-screen flex flex-col justify-center items-center p-4"></div>
+
+  <!-- React + ReactDOM CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <script type="text/javascript">
+    const { useState } = React;
+    const { CheckCircle, AlertCircle, Search, Loader2 } = window.lucide;
+
+    function Loader() {
+      return (
+        React.createElement('div', { className: 'flex justify-center items-center py-6' },
+          React.createElement(Loader2, { className: 'animate-spin w-10 h-10 text-[#FF4C4C]' })
+        )
+      );
+    }
+
+    function BreachCard({ breach }) {
+      return (
+        React.createElement('div', { className: 'bg-[#1A1A1A] p-4 rounded-lg shadow-md mb-4 border border-[#FF4C4C]' },
+          React.createElement('h3', { className: 'text-red-400 font-bold text-lg' }, breach.Name),
+          React.createElement('p', { className: 'text-gray-300' }, 'Date: ' + breach.BreachDate),
+          React.createElement('p', { className: 'text-gray-300' }, 'Exposed Data: ' + breach.DataClasses.join(', '))
+        )
+      );
+    }
+
+    function InfoSection() {
+      return (
+        React.createElement('div', { className: 'mt-8 text-gray-400 text-sm text-center' },
+          React.createElement('p', null, 'Popular in UAE & globally — check your email now.'),
+          React.createElement('p', null,
+            'Why this tool? It only shows breach existence — never passwords. ',
+            React.createElement('a', { href: 'https://haveibeenpwned.com', target: '_blank', className: 'text-red-500 ml-1 underline' }, 'Learn more')
+          )
+        )
+      );
+    }
+
+    function App() {
+      const [email, setEmail] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState('');
+
+      const handleCheck = async () => {
+        setError('');
+        setResult(null);
+
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+          setError('Please enter a valid email address');
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const res = await fetch('http://localhost:5000/api/check-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+
+          if (!res.ok) {
+            if (res.status === 429) throw new Error('Rate limit exceeded. Try again later.');
+            throw new Error('Network error');
+          }
+
+          const data = await res.json();
+          setResult(data);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        React.createElement('div', { className: 'flex flex-col items-center w-full max-w-md' },
+          React.createElement('h1', { className: 'text-5xl font-bold mb-6 text-center text-[#FF4C4C]' }, 'UAE Leak Radar'),
+
+          React.createElement('div', { className: 'flex w-full mb-4' },
+            React.createElement('input', {
+              type: 'email',
+              placeholder: 'Enter your email address',
+              className: 'flex-1 p-3 rounded-l-lg bg-[#222222] text-white focus:outline-none border border-[#FF4C4C]',
+              value: email,
+              onChange: e => setEmail(e.target.value)
+            }),
+            React.createElement('button', {
+              className: 'bg-[#FF4C4C] px-4 rounded-r-lg flex items-center justify-center hover:bg-[#D13939]',
+              onClick: handleCheck
+            }, React.createElement(Search, { className: 'w-5 h-5 mr-1' }), 'Check Now')
+          ),
+
+          error && React.createElement('p', { className: 'text-red-500 mb-4' }, error),
+          loading && React.createElement(Loader, null),
+
+          result && !result.leaked && React.createElement('div', { className: 'flex flex-col items-center text-[#4CAF50] mt-6' },
+            React.createElement(CheckCircle, { className: 'w-12 h-12 mb-2' }),
+            React.createElement('p', { className: 'text-lg font-semibold' }, 'No breaches found – your email is safe')
+          ),
+
+          result && result.leaked && React.createElement('div', { className: 'w-full mt-6' },
+            React.createElement('div', { className: 'flex items-center text-[#FF4C4C] mb-4' },
+              React.createElement(AlertCircle, { className: 'w-8 h-8 mr-2' }),
+              React.createElement('p', { className: 'font-bold text-lg' }, 
+                `Your email was found in ${result.count} breach${result.count > 1 ? 'es' : ''}!`
+              )
+            ),
+            result.breaches.map(b => React.createElement(BreachCard, { key: b.Name, breach: b })),
+            React.createElement('p', { className: 'text-red-400 mt-4 font-semibold' }, 'Change your passwords immediately, especially if reused')
+          ),
+
+          React.createElement(InfoSection, null)
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
+  </script>
+</body>
+</html>
