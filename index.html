@@ -1,52 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Email Breach Checker</title>
-  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Email Breach Checker</h1>
-  <form id="form">
-    <input type="email" id="email" placeholder="Enter email..." required>
+  <h1>Check if your email was breached</h1>
+  <form id="checkForm">
+    <input type="email" id="email" placeholder="you@example.com" required />
     <button type="submit">Check</button>
   </form>
-
   <div id="result"></div>
 
   <script>
-    document.getElementById("form").addEventListener("submit", async (e) => {
+    document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("email").value.trim();
+      const email = document.getElementById("email").value;
       const resultDiv = document.getElementById("result");
-      resultDiv.innerHTML = "Checking...";
 
-      const res = await fetch("/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({ email })
-      });
-
-      const data = await res.json();
-
-      if (data.breached === false) {
-        resultDiv.innerHTML = "<p>No breaches found. Email is safe.</p>";
-        return;
-      }
-
-      if (data.breaches && data.breaches.length > 0) {
-        let html = `<h2>Breaches Found (${data.breaches.length})</h2>`;
-        data.breaches.forEach(breach => {
-          html += `
-            <div class="breach">
-              <h3>${breach.Title}</h3>
-              <p><strong>Domain:</strong> ${breach.Domain || "N/A"}</p>
-              <p><strong>Breach Date:</strong> ${breach.BreachDate}</p>
-              <p><strong>Compromised Data:</strong> ${breach.DataClasses.join(", ")}</p>
-              <p><strong>Description:</strong> ${breach.Description}</p>
-            </div>
-          `;
+      try {
+        const res = await fetch("/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
         });
-        resultDiv.innerHTML = html;
+        const data = await res.json();
+
+        if (data.error) {
+          resultDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+        } else if (data.breached) {
+          resultDiv.innerHTML = `<h2 style="color:red;">Pwned! (${data.breaches.length} breaches)</h2>`;
+          data.breaches.forEach(b => {
+            resultDiv.innerHTML += `
+              <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+                <strong>${b.Title || b.Name}</strong><br>
+                Date: ${b.BreachDate || "Unknown"}<br>
+                Exposed: ${b.DataClasses?.join(", ") || "N/A"}<br>
+                <small>${b.Description || ""}</small>
+              </div>`;
+          });
+        } else {
+          resultDiv.innerHTML = '<h2 style="color:green;">Good news — no known breaches!</h2>';
+        }
+      } catch (err) {
+        resultDiv.innerHTML = '<p style="color:red;">Network error</p>';
       }
     });
   </script>
